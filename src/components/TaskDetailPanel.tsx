@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { theme } from '../theme';
 import { PRIORITY_CONFIG, DEFAULT_LABEL_COLORS } from '../types/tasks';
 import type { TaskWithLabels, Priority, Label } from '../types/tasks';
+import type { TeamMember } from '../hooks/useTeam';
 
 interface TaskDetailPanelProps {
   task: TaskWithLabels;
   labels: Label[];
+  teamMembers: TeamMember[];
   onClose: () => void;
   onUpdate: (taskId: string, updates: Partial<TaskWithLabels>) => void;
   onDelete: (taskId: string) => void;
@@ -18,6 +20,7 @@ interface TaskDetailPanelProps {
 export function TaskDetailPanel({
   task,
   labels,
+  teamMembers,
   onClose,
   onUpdate,
   onDelete,
@@ -30,6 +33,7 @@ export function TaskDetailPanel({
   const [description, setDescription] = useState(task.description || '');
   const [priority, setPriority] = useState<Priority>(task.priority);
   const [dueDate, setDueDate] = useState(task.due_date || '');
+  const [assigneeId, setAssigneeId] = useState<string | null>(task.assignee_id);
   const [showLabelCreator, setShowLabelCreator] = useState(false);
   const [newLabelName, setNewLabelName] = useState('');
   const [newLabelColor, setNewLabelColor] = useState(DEFAULT_LABEL_COLORS[0]);
@@ -41,6 +45,7 @@ export function TaskDetailPanel({
       description: description.trim() || null,
       priority,
       due_date: dueDate || null,
+      assignee_id: assigneeId,
     });
     onClose();
   };
@@ -229,6 +234,88 @@ export function TaskDetailPanel({
               style={{ ...inputStyle, marginTop: '0.25rem' }}
             />
           </label>
+
+          {/* Assignee */}
+          <div style={{ marginBottom: '1.25rem' }}>
+            <span style={{
+              fontSize: theme.font.size.sm,
+              fontWeight: theme.font.weight.semibold,
+              color: theme.colors.textSecondary,
+              display: 'block',
+              marginBottom: '0.4rem',
+            }}>
+              Assignee
+            </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+              {/* Unassign button */}
+              <button
+                onClick={() => setAssigneeId(null)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  padding: '0.3rem 0.6rem',
+                  borderRadius: theme.radius.sm,
+                  border: `1px solid ${!assigneeId ? theme.colors.accent : theme.colors.border}`,
+                  backgroundColor: !assigneeId ? theme.colors.accentLight : 'transparent',
+                  color: !assigneeId ? theme.colors.accent : theme.colors.textMuted,
+                  fontFamily: theme.font.family,
+                  fontSize: theme.font.size.xs,
+                  fontWeight: theme.font.weight.medium,
+                  cursor: 'pointer',
+                }}
+              >
+                No one
+              </button>
+
+              {teamMembers.map((member) => (
+                <button
+                  key={member.id}
+                  onClick={() => setAssigneeId(member.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                    padding: '0.3rem 0.6rem',
+                    borderRadius: theme.radius.sm,
+                    border: `1px solid ${assigneeId === member.id ? member.color : theme.colors.border}`,
+                    backgroundColor: assigneeId === member.id ? `${member.color}18` : 'transparent',
+                    color: assigneeId === member.id ? member.color : theme.colors.textMuted,
+                    fontFamily: theme.font.family,
+                    fontSize: theme.font.size.xs,
+                    fontWeight: theme.font.weight.medium,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <div style={{
+                    width: '16px',
+                    height: '16px',
+                    borderRadius: '50%',
+                    backgroundColor: member.color,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.5rem',
+                    color: '#fff',
+                    fontWeight: 700,
+                  }}>
+                    {member.name.charAt(0).toUpperCase()}
+                  </div>
+                  {member.name}
+                </button>
+              ))}
+            </div>
+
+            {teamMembers.length === 0 && (
+              <p style={{
+                fontSize: theme.font.size.xs,
+                color: theme.colors.textMuted,
+                marginTop: '0.3rem',
+              }}>
+                No team members yet — add some from the header
+              </p>
+            )}
+          </div>
 
           {/* Labels section */}
           <div style={{ marginBottom: '1.25rem' }}>

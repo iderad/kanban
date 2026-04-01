@@ -10,6 +10,7 @@ import { BoardFilters } from './components/BoardFilters';
 import { BoardStats } from './components/BoardStats';
 import { BoardSkeleton } from './components/Skeleton';
 import { ErrorToast } from './components/ErrorToast';
+import { TeamManager } from './components/TeamManager';
 import { theme } from './theme';
 import type { TaskWithLabels, Status, Priority } from './types/tasks';
 
@@ -29,9 +30,10 @@ function App() {
   } = useTasks(user?.id);
 
   const { labels, createLabel, addLabelToTask, removeLabelFromTask } = useLabels(user?.id);
-  const { members } = useTeam(user?.id);
+  const { members, addMember, removeMember } = useTeam(user?.id);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTeamOpen, setIsTeamOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskWithLabels | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<Priority | 'all'>('all');
@@ -76,6 +78,8 @@ function App() {
           padding: '0.75rem 1.5rem',
           borderBottom: `1px solid ${theme.colors.border}`,
           backgroundColor: theme.colors.card,
+          position: 'relative',
+          zIndex: 10,
         }}>
           <h1 style={{
             fontSize: theme.font.size.xl,
@@ -114,22 +118,40 @@ function App() {
         }}>
           Task Board
         </h1>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: theme.colors.accent,
-            color: '#fff',
-            border: 'none',
-            borderRadius: theme.radius.md,
-            cursor: 'pointer',
-            fontFamily: theme.font.family,
-            fontWeight: theme.font.weight.semibold,
-            fontSize: theme.font.size.base,
-          }}
-        >
-          + New Task
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={() => setIsTeamOpen(true)}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: 'transparent',
+              color: theme.colors.accent,
+              border: `1px solid ${theme.colors.accent}`,
+              borderRadius: theme.radius.md,
+              cursor: 'pointer',
+              fontFamily: theme.font.family,
+              fontWeight: theme.font.weight.semibold,
+              fontSize: theme.font.size.base,
+            }}
+          >
+             Team Member ({members.length})
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: theme.colors.accent,
+              color: '#fff',
+              border: 'none',
+              borderRadius: theme.radius.md,
+              cursor: 'pointer',
+              fontFamily: theme.font.family,
+              fontWeight: theme.font.weight.semibold,
+              fontSize: theme.font.size.base,
+            }}
+          >
+            + New Task
+          </button>
+        </div>
       </header>
 
       {/* Stats */}
@@ -153,7 +175,6 @@ function App() {
           onDragEnd={(taskId, newStatus) => updateTaskStatus(taskId, newStatus)}
           onTaskClick={(task) => setSelectedTask(task)}
           teamMembers={members}
-
         />
       </div>
 
@@ -162,6 +183,7 @@ function App() {
         <TaskDetailPanel
           task={currentSelectedTask}
           labels={labels}
+          teamMembers={members}
           onClose={() => setSelectedTask(null)}
           onUpdate={updateTask}
           onDelete={deleteTask}
@@ -171,6 +193,15 @@ function App() {
           onRefreshLabels={refreshTaskLabels}
         />
       )}
+
+      {/* Team manager modal */}
+      <TeamManager
+        isOpen={isTeamOpen}
+        onClose={() => setIsTeamOpen(false)}
+        members={members}
+        onAddMember={addMember}
+        onRemoveMember={removeMember}
+      />
 
       {/* Error toast */}
       {error && (
