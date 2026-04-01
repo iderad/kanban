@@ -2,8 +2,11 @@ import { useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { useTasks } from './hooks/useTasks';
 import { Board } from './components/Board';
-import { CreateTaskModal } from './components/CreateTaskModel.tsx';
-import type { Task, Status } from './types/tasks.ts';
+import { CreateTaskModal } from './components/CreateTaskModel';
+import { BoardSkeleton } from './components/Skeleton';
+import { ErrorToast } from './components/ErrorToast';
+import { theme } from './theme';
+import type { Task, Status } from './types/tasks';
 
 function App() {
   const { user, loading: authLoading } = useAuth();
@@ -17,87 +20,90 @@ function App() {
   } = useTasks(user?.id);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  if (authLoading || tasksLoading) {
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        color: '#6b7280',
-      }}>
-        Loading your board...
-      </div>
-    );
-  }
+  const [lastAction, setLastAction] = useState<{ taskId: string; status: Status } | null>(null);
 
   const handleDragEnd = (taskId: string, newStatus: Status) => {
+    setLastAction({ taskId, status: newStatus });
     updateTaskStatus(taskId, newStatus);
   };
 
   const handleTaskClick = (task: Task) => {
-    // You'll expand this later into a detail panel
     console.log('Clicked task:', task);
   };
 
+  const handleRetry = () => {
+    if (lastAction) {
+      updateTaskStatus(lastAction.taskId, lastAction.status);
+    }
+    setError(null);
+  };
+
   return (
-    <div style={{ height: '100vh', backgroundColor: '#f9fafb' }}>
+    <div style={{
+      height: '100vh',
+      backgroundColor: theme.colors.bg,
+      fontFamily: theme.font.family,
+    }}>
       {/* Header */}
       <header style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '0.75rem 1.5rem',
-        borderBottom: '1px solid #e5e7eb',
-        backgroundColor: '#fff',
+        borderBottom: `1px solid ${theme.colors.border}`,
+        backgroundColor: theme.colors.card,
       }}>
-        <h1 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Task Board</h1>
+        <h1 style={{
+          fontSize: theme.font.size.xl,
+          fontWeight: theme.font.weight.bold,
+          color: theme.colors.textPrimary,
+        }}>
+          Task Board
+        </h1>
         <button
           onClick={() => setIsModalOpen(true)}
           style={{
             padding: '0.5rem 1rem',
-            backgroundColor: '#3b82f6',
+            backgroundColor: theme.colors.accent,
             color: '#fff',
             border: 'none',
-            borderRadius: '8px',
+            borderRadius: theme.radius.md,
             cursor: 'pointer',
-            fontWeight: 500,
-            fontSize: '0.875rem',
+            fontFamily: theme.font.family,
+            fontWeight: theme.font.weight.semibold,
+            fontSize: theme.font.size.base,
+            transition: 'background-color 0.15s ease',
           }}
+          onMouseEnter={(e) =>
+            (e.currentTarget.style.backgroundColor = theme.colors.accentHover)
+          }
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.backgroundColor = theme.colors.accent)
+          }
         >
           + New Task
         </button>
       </header>
 
-      {/* Error toast */}
-      {error && (
-        <div
-          onClick={() => setError(null)}
-          style={{
-            position: 'fixed',
-            bottom: '1rem',
-            right: '1rem',
-            backgroundColor: '#fef2f2',
-            color: '#dc2626',
-            padding: '0.75rem 1rem',
-            borderRadius: '8px',
-            border: '1px solid #fecaca',
-            cursor: 'pointer',
-            zIndex: 100,
-            fontSize: '0.875rem',
-          }}
-        >
-          {error} (click to dismiss)
-        </div>
+      {/* Loading skeleton or board */}
+      {authLoading || tasksLoading ? (
+        <BoardSkeleton />
+      ) : (
+        <Board
+          tasksByStatus={tasksByStatus()}
+          onDragEnd={handleDragEnd}
+          onTaskClick={handleTaskClick}
+        />
       )}
 
-      {/* Board */}
-      <Board
-        tasksByStatus={tasksByStatus()}
-        onDragEnd={handleDragEnd}
-        onTaskClick={handleTaskClick}
-      />
+      {/* Error toast with retry */}
+      {error && (
+        <ErrorToast
+          message={error}
+          onDismiss={() => setError(null)}
+          onRetry={handleRetry}
+        />
+      )}
 
       {/* Create modal */}
       <CreateTaskModal

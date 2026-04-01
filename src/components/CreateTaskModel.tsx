@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { Priority } from '../types/tasks.ts';
+import { PRIORITY_CONFIG, type Priority } from '../types/tasks.ts';
+import { theme } from '../theme';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -15,7 +16,7 @@ interface CreateTaskModalProps {
 export function CreateTaskModal({ isOpen, onClose, onCreate }: CreateTaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<Priority>('normal');
+  const [priority, setPriority] = useState<Priority>('3');
   const [dueDate, setDueDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -32,48 +33,71 @@ export function CreateTaskModal({ isOpen, onClose, onCreate }: CreateTaskModalPr
       due_date: dueDate || null,
     });
 
-    // Reset form and close
     setTitle('');
     setDescription('');
-    setPriority('normal');
+    setPriority('3');
     setDueDate('');
     setSubmitting(false);
     onClose();
   };
 
+  const inputStyle = {
+    width: '100%',
+    padding: '0.5rem 0.75rem',
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: theme.radius.md,
+    marginTop: '0.25rem',
+    fontSize: theme.font.size.base,
+    fontFamily: theme.font.family,
+    backgroundColor: theme.colors.card,
+    color: theme.colors.textPrimary,
+    outline: 'none',
+    boxSizing: 'border-box' as const,
+  };
+
   return (
-    // Backdrop
     <div
       onClick={onClose}
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(45, 36, 24, 0.4)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 50,
       }}
     >
-      {/* Modal — stop click propagation so clicking inside doesn't close it */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundColor: '#fff',
-          borderRadius: '12px',
+          backgroundColor: theme.colors.bg,
+          borderRadius: theme.radius.xl,
           padding: '1.5rem',
           width: '100%',
           maxWidth: '480px',
           margin: '1rem',
+          boxShadow: theme.shadow.modal,
+          border: `1px solid ${theme.colors.border}`,
+          fontFamily: theme.font.family,
         }}
       >
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 600, marginBottom: '1rem' }}>
+        <h2 style={{
+          fontSize: theme.font.size.lg,
+          fontWeight: theme.font.weight.bold,
+          color: theme.colors.textPrimary,
+          marginBottom: '1.25rem',
+        }}>
           Create New Task
         </h2>
 
-        {/* Title — required */}
+        {/* Title */}
         <label style={{ display: 'block', marginBottom: '1rem' }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#374151' }}>
+          <span style={{
+            fontSize: theme.font.size.sm,
+            fontWeight: theme.font.weight.semibold,
+            color: theme.colors.textSecondary,
+          }}>
             Title *
           </span>
           <input
@@ -81,22 +105,17 @@ export function CreateTaskModal({ isOpen, onClose, onCreate }: CreateTaskModalPr
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="What needs to be done?"
-            style={{
-              width: '100%',
-              padding: '0.5rem 0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              marginTop: '0.25rem',
-              fontSize: '0.875rem',
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
+            style={inputStyle}
           />
         </label>
 
         {/* Description */}
         <label style={{ display: 'block', marginBottom: '1rem' }}>
-          <span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#374151' }}>
+          <span style={{
+            fontSize: theme.font.size.sm,
+            fontWeight: theme.font.weight.semibold,
+            color: theme.colors.textSecondary,
+          }}>
             Description
           </span>
           <textarea
@@ -104,65 +123,68 @@ export function CreateTaskModal({ isOpen, onClose, onCreate }: CreateTaskModalPr
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Add more detail..."
             rows={3}
-            style={{
-              width: '100%',
-              padding: '0.5rem 0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              marginTop: '0.25rem',
-              fontSize: '0.875rem',
-              resize: 'vertical',
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
+            style={{ ...inputStyle, resize: 'vertical' as const }}
           />
         </label>
 
-        {/* Priority and Due Date on the same row */}
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-          <label style={{ flex: 1 }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#374151' }}>
-              Priority
-            </span>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as Priority)}
-              style={{
-                width: '100%',
-                padding: '0.5rem 0.75rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                marginTop: '0.25rem',
-                fontSize: '0.875rem',
-                outline: 'none',
-              }}
-            >
-              <option value="low">Low</option>
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
-            </select>
-          </label>
-
-          <label style={{ flex: 1 }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 500, color: '#374151' }}>
-              Due Date
-            </span>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.5rem 0.75rem',
-                border: '1px solid #d1d5db',
-                borderRadius: '8px',
-                marginTop: '0.25rem',
-                fontSize: '0.875rem',
-                outline: 'none',
-              }}
-            />
-          </label>
+        {/* Priority selector — visual buttons */}
+        <div style={{ marginBottom: '1rem' }}>
+          <span style={{
+            fontSize: theme.font.size.sm,
+            fontWeight: theme.font.weight.semibold,
+            color: theme.colors.textSecondary,
+            display: 'block',
+            marginBottom: '0.4rem',
+          }}>
+            Priority
+          </span>
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            {(['1', '2', '3', '4', '5'] as Priority[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPriority(p)}
+                style={{
+                  flex: 1,
+                  padding: '0.4rem',
+                  border: priority === p
+                    ? `2px solid ${PRIORITY_CONFIG[p].color}`
+                    : `1px solid ${theme.colors.border}`,
+                  borderRadius: theme.radius.sm,
+                  backgroundColor: priority === p
+                    ? `${PRIORITY_CONFIG[p].color}18`
+                    : theme.colors.card,
+                  cursor: 'pointer',
+                  fontFamily: theme.font.family,
+                  fontSize: theme.font.size.xs,
+                  fontWeight: theme.font.weight.semibold,
+                  color: priority === p
+                    ? PRIORITY_CONFIG[p].color
+                    : theme.colors.textMuted,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                P{p}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Due Date */}
+        <label style={{ display: 'block', marginBottom: '1.5rem' }}>
+          <span style={{
+            fontSize: theme.font.size.sm,
+            fontWeight: theme.font.weight.semibold,
+            color: theme.colors.textSecondary,
+          }}>
+            Due Date
+          </span>
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            style={inputStyle}
+          />
+        </label>
 
         {/* Actions */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
@@ -170,11 +192,14 @@ export function CreateTaskModal({ isOpen, onClose, onCreate }: CreateTaskModalPr
             onClick={onClose}
             style={{
               padding: '0.5rem 1rem',
-              borderRadius: '8px',
-              border: '1px solid #d1d5db',
-              backgroundColor: '#fff',
+              borderRadius: theme.radius.md,
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: 'transparent',
+              color: theme.colors.textSecondary,
               cursor: 'pointer',
-              fontSize: '0.875rem',
+              fontFamily: theme.font.family,
+              fontSize: theme.font.size.base,
+              fontWeight: theme.font.weight.medium,
             }}
           >
             Cancel
@@ -183,14 +208,18 @@ export function CreateTaskModal({ isOpen, onClose, onCreate }: CreateTaskModalPr
             onClick={handleSubmit}
             disabled={!title.trim() || submitting}
             style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '8px',
+              padding: '0.5rem 1.25rem',
+              borderRadius: theme.radius.md,
               border: 'none',
-              backgroundColor: title.trim() ? '#3b82f6' : '#93c5fd',
+              backgroundColor: title.trim()
+                ? theme.colors.accent
+                : theme.colors.border,
               color: '#fff',
               cursor: title.trim() ? 'pointer' : 'not-allowed',
-              fontSize: '0.875rem',
-              fontWeight: 500,
+              fontFamily: theme.font.family,
+              fontSize: theme.font.size.base,
+              fontWeight: theme.font.weight.semibold,
+              transition: 'background-color 0.15s ease',
             }}
           >
             {submitting ? 'Creating...' : 'Create Task'}
