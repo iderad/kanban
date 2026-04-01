@@ -1,121 +1,112 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from 'react';
+import { useAuth } from './hooks/useAuth';
+import { useTasks } from './hooks/useTasks';
+import { Board } from './components/Board';
+import { CreateTaskModal } from './components/CreateTaskModel.tsx';
+import type { Task, Status } from './types/tasks.ts';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { user, loading: authLoading } = useAuth();
+  const {
+    tasksByStatus,
+    loading: tasksLoading,
+    error,
+    setError,
+    createTask,
+    updateTaskStatus,
+  } = useTasks(user?.id);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  if (authLoading || tasksLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        color: '#6b7280',
+      }}>
+        Loading your board...
+      </div>
+    );
+  }
+
+  const handleDragEnd = (taskId: string, newStatus: Status) => {
+    updateTaskStatus(taskId, newStatus);
+  };
+
+  const handleTaskClick = (task: Task) => {
+    // You'll expand this later into a detail panel
+    console.log('Clicked task:', task);
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
+    <div style={{ height: '100vh', backgroundColor: '#f9fafb' }}>
+      {/* Header */}
+      <header style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '0.75rem 1.5rem',
+        borderBottom: '1px solid #e5e7eb',
+        backgroundColor: '#fff',
+      }}>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Task Board</h1>
         <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+          onClick={() => setIsModalOpen(true)}
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: '#3b82f6',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 500,
+            fontSize: '0.875rem',
+          }}
         >
-          Count is {count}
+          + New Task
         </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      {/* Error toast */}
+      {error && (
+        <div
+          onClick={() => setError(null)}
+          style={{
+            position: 'fixed',
+            bottom: '1rem',
+            right: '1rem',
+            backgroundColor: '#fef2f2',
+            color: '#dc2626',
+            padding: '0.75rem 1rem',
+            borderRadius: '8px',
+            border: '1px solid #fecaca',
+            cursor: 'pointer',
+            zIndex: 100,
+            fontSize: '0.875rem',
+          }}
+        >
+          {error} (click to dismiss)
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      {/* Board */}
+      <Board
+        tasksByStatus={tasksByStatus()}
+        onDragEnd={handleDragEnd}
+        onTaskClick={handleTaskClick}
+      />
+
+      {/* Create modal */}
+      <CreateTaskModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onCreate={createTask}
+      />
+    </div>
+  );
 }
 
-export default App
+export default App;
