@@ -1,7 +1,6 @@
 import { DragDropContext, type DropResult } from '@hello-pangea/dnd';
 import { COLUMNS, type Status } from '../types/tasks';
 import { Column } from './Column';
-import { theme } from '../theme';
 import type { TaskWithLabels } from '../types/tasks';
 import type { TeamMember } from '../hooks/useTeam';
 
