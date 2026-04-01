@@ -8,6 +8,7 @@ export interface Task {
   status: Status;
   priority: Priority;
   due_date: string | null;
+  assignee_id: string | null;
   user_id: string;
   created_at: string;
 }
@@ -28,3 +29,26 @@ export const PRIORITY_CONFIG: Record<Priority, { color: string; label: string }>
   '4': { color: '#0d9488', label: 'Low' },
   '5': { color: '#3b82f6', label: 'Minimal' },
 };
+
+export interface Label {
+  id: string;
+  name: string;
+  color: string;
+  user_id: string;
+  created_at: string;
+}
+
+export interface TaskWithLabels extends Task {
+  labels: Label[];
+}
+
+export const DEFAULT_LABEL_COLORS = [
+  '#ef4444', // red
+  '#f97316', // orange
+  '#eab308', // yellow
+  '#22c55e', // green
+  '#3b82f6', // blue
+  '#8b5cf6', // purple
+  '#ec4899', // pink
+  '#6b7280', // gray
+];

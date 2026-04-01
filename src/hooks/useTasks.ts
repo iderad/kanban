@@ -1,37 +1,58 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import type { Task, Status } from '../types/tasks.ts';
+import type { Task, TaskWithLabels, Label, Status } from '../types/tasks';
 
 export function useTasks(userId: string | undefined) {
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<TaskWithLabels[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch all tasks on mount
-  useEffect(() => {
+  const fetchTasks = useCallback(async () => {
     if (!userId) return;
+    setLoading(true);
 
-    const fetchTasks = async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .order('created_at', { ascending: true });
+    // Fetch tasks
+    const { data: tasksData, error: tasksError } = await supabase
+      .from('tasks')
+      .select('*')
+      .order('created_at', { ascending: true });
 
-      if (error) {
-        setError(error.message);
-      } else {
-        setTasks(data as Task[]);
-      }
+    if (tasksError) {
+      setError(tasksError.message);
       setLoading(false);
-    };
+      return;
+    }
 
-    fetchTasks();
+    // Fetch all task_labels with label info
+    const { data: taskLabelsData } = await supabase
+      .from('task_labels')
+      .select('task_id, label_id, labels:label_id(*)');
+
+    // Build a map of task_id -> labels
+    const labelMap: Record<string, Label[]> = {};
+    if (taskLabelsData) {
+      taskLabelsData.forEach((tl: any) => {
+        if (!labelMap[tl.task_id]) labelMap[tl.task_id] = [];
+        if (tl.labels) labelMap[tl.task_id].push(tl.labels as Label);
+      });
+    }
+
+    // Merge labels into tasks
+    const tasksWithLabels: TaskWithLabels[] = (tasksData as Task[]).map((task) => ({
+      ...task,
+      labels: labelMap[task.id] || [],
+    }));
+
+    setTasks(tasksWithLabels);
+    setLoading(false);
   }, [userId]);
 
-  // Helper: group tasks by status (used by the board)
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
   const tasksByStatus = useCallback(() => {
-    const grouped: Record<Status, Task[]> = {
+    const grouped: Record<Status, TaskWithLabels[]> = {
       todo: [],
       in_progress: [],
       in_review: [],
@@ -43,11 +64,10 @@ export function useTasks(userId: string | undefined) {
     return grouped;
   }, [tasks]);
 
-  // Create a new task
   const createTask = async (
     taskData: Pick<Task, 'title' | 'description' | 'priority' | 'due_date'>
   ) => {
-    if (!userId) return;
+    if (!userId) return null;
 
     const { data, error } = await supabase
       .from('tasks')
@@ -64,48 +84,71 @@ export function useTasks(userId: string | undefined) {
       return null;
     }
 
-    // Add the new task to local state
-    setTasks((prev) => [...prev, data as Task]);
+    const newTask: TaskWithLabels = { ...(data as Task), labels: [] };
+    setTasks((prev) => [...prev, newTask]);
     return data;
   };
 
-  // Update a task's status (used by drag-and-drop)
   const updateTaskStatus = async (taskId: string, newStatus: Status) => {
-    // Save old state for rollback
     const previousTasks = [...tasks];
-
-    // Optimistic update — UI updates instantly
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
     );
 
-    // Then sync to database
     const { error } = await supabase
       .from('tasks')
       .update({ status: newStatus })
       .eq('id', taskId);
 
     if (error) {
-      // Rollback on failure
       setTasks(previousTasks);
       setError(`Failed to update task: ${error.message}`);
     }
   };
 
-  // Delete a task
+  const updateTask = async (taskId: string, updates: Partial<Task>) => {
+    const previousTasks = [...tasks];
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t))
+    );
+
+    const { error } = await supabase
+      .from('tasks')
+      .update(updates)
+      .eq('id', taskId);
+
+    if (error) {
+      setTasks(previousTasks);
+      setError(`Failed to update task: ${error.message}`);
+    }
+  };
+
   const deleteTask = async (taskId: string) => {
     const previousTasks = [...tasks];
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
 
-    const { error } = await supabase
-      .from('tasks')
-      .delete()
-      .eq('id', taskId);
+    const { error } = await supabase.from('tasks').delete().eq('id', taskId);
 
     if (error) {
       setTasks(previousTasks);
       setError(`Failed to delete task: ${error.message}`);
     }
+  };
+
+  // Call this after adding/removing a label to refresh label data
+  const refreshTaskLabels = async (taskId: string) => {
+    const { data } = await supabase
+      .from('task_labels')
+      .select('label_id, labels:label_id(*)')
+      .eq('task_id', taskId);
+
+    const labels: Label[] = data
+      ? data.map((tl: any) => tl.labels as Label).filter(Boolean)
+      : [];
+
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, labels } : t))
+    );
   };
 
   return {
@@ -115,7 +158,9 @@ export function useTasks(userId: string | undefined) {
     error,
     setError,
     createTask,
+    updateTask,
     updateTaskStatus,
     deleteTask,
+    refreshTaskLabels,
   };
 }

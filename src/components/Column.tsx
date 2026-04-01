@@ -1,13 +1,15 @@
 import { Droppable } from '@hello-pangea/dnd';
 import { TaskCard } from './TaskCard';
 import { theme } from '../theme';
-import type { Task, Status } from '../types/tasks.ts';
+import type { TaskWithLabels, Status } from '../types/tasks';
+import type { TeamMember } from '../hooks/useTeam';
 
 interface ColumnProps {
   id: Status;
   title: string;
-  tasks: Task[];
-  onTaskClick: (task: Task) => void;
+  tasks: TaskWithLabels[];
+  onTaskClick: (task: TaskWithLabels) => void;
+  teamMembers: TeamMember[];
 }
 
 const COLUMN_ICONS: Record<Status, string> = {
@@ -17,7 +19,7 @@ const COLUMN_ICONS: Record<Status, string> = {
   done: '●',
 };
 
-export function Column({ id, title, tasks, onTaskClick }: ColumnProps) {
+export function Column({ id, title, tasks, onTaskClick, teamMembers }: ColumnProps) {
   return (
     <div style={{
       minWidth: '280px',
@@ -123,6 +125,7 @@ export function Column({ id, title, tasks, onTaskClick }: ColumnProps) {
                 task={task}
                 index={index}
                 onClick={() => onTaskClick(task)}
+                teamMembers={teamMembers}
               />
             ))}
             {provided.placeholder}
